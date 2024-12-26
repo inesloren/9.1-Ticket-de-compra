@@ -48,72 +48,65 @@ export const procesarLineaTicket = (lineaTicket: LineaTicket): ResultadoLineaTic
   };
 };
 
-//Resultado total de ticket
-
+// Resultado total de ticket
 export const calcularTotalTicket = (lineasTicket: LineaTicket[]): ResultadoTotalTicket => {
-  if (!lineasTicket) {
+  if (!lineasTicket || lineasTicket === null) {
     throw "El parámetro de entrada no es correcto";
   }
-  if (lineasTicket === null) {
-    throw "El parámetro de entrada no es correcto";
-  }
-  let totalSinIva = 0;
-  let totalConIva = 0;
-  let totalIva = 0;
 
-  for (let i = 0; i < lineasTicket.length; i++) {
-    const lineaTicket = lineasTicket[i];
+  const resultadoInicial = {
+    totalSinIva: 0,
+    totalConIva: 0,
+    totalIva: 0,
+  };
+
+  const resultadoFinal = lineasTicket.reduce((acumulador, lineaTicket) => {
     const resultadoLineaTicket = procesarLineaTicket(lineaTicket);
 
-    totalSinIva += resultadoLineaTicket.precioSinIva;
-    totalConIva += resultadoLineaTicket.precioConIva;
-    totalIva += resultadoLineaTicket.precioConIva - resultadoLineaTicket.precioSinIva;
-  }
-
-  totalIva = parseFloat(totalIva.toFixed(2));
+    return {
+      totalSinIva: acumulador.totalSinIva + resultadoLineaTicket.precioSinIva,
+      totalConIva: acumulador.totalConIva + resultadoLineaTicket.precioConIva,
+      totalIva: acumulador.totalIva + (resultadoLineaTicket.precioConIva - resultadoLineaTicket.precioSinIva),
+    };
+  }, resultadoInicial);
 
   return {
-    totalSinIva,
-    totalConIva,
-    totalIva,
+    ...resultadoFinal,
+    totalIva: parseFloat(resultadoFinal.totalIva.toFixed(2)),
   };
 };
 
 //Total por tipo de iva
 
 export const calcularTotalPorTipoIva = (lineasTicket: LineaTicket[]): TotalPorTipoIva[] => {
-  if (!lineasTicket) {
-    throw "El parámetro de entrada no es correcto";
-  }
-  if (lineasTicket === null) {
+  if (!lineasTicket || lineasTicket === null) {
     throw "El parámetro de entrada no es correcto";
   }
 
-  const totalesPorTipo: Record<TipoIva, number> = {
+  const totalesPorTipo = lineasTicket.reduce<Record<TipoIva, number>>((acumulador, lineaTicket) => {
+    const resultadoLineaTicket = procesarLineaTicket(lineaTicket);
+    const ivaAplicado = resultadoLineaTicket.precioConIva - resultadoLineaTicket.precioSinIva;
+
+    if (ivaAplicado > 0) {
+      acumulador[resultadoLineaTicket.tipoIva] += ivaAplicado;
+    }
+
+    return acumulador;
+  }, {
     general: 0,
     reducido: 0,
     superreducidoA: 0,
     superreducidoB: 0,
     superreducidoC: 0,
     sinIva: 0,
-  };
-
-  for (let i = 0; i < lineasTicket.length; i++) {
-    const lineaTicket = lineasTicket[i];
-    const resultadoLineaTicket = procesarLineaTicket(lineaTicket);
-
-    const ivaAplicado = resultadoLineaTicket.precioConIva - resultadoLineaTicket.precioSinIva;
-
-    if (ivaAplicado > 0) {
-      totalesPorTipo[resultadoLineaTicket.tipoIva] += ivaAplicado;
-    }
-  }
+  });
 
   return Object.entries(totalesPorTipo).map(([tipoIva, cuantia]) => ({
     tipoIva: tipoIva as TipoIva,
     cuantia: parseFloat(cuantia.toFixed(2)),
   }));
 };
+
 
 //Ticket final
 
